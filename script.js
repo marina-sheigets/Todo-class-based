@@ -1,74 +1,155 @@
-let todos=[];
-const addButton=document.querySelector(".submit"),
-      ul=document.querySelector(".todo-list");     
-
-addButton.addEventListener("click",(e)=>{
-    e.preventDefault();
-   let task=document.querySelector(".todo-input");
-   let newTask=task.value;
-   if(newTask.trim().length===0){
-    alert("Task should not be empty");
-    return;
-   }
-   let todoObj={
-    todo:newTask,
-    checked:false
-   }
-   todos.push(todoObj);
-   console.log(todos)
-   task.value=""
-   render();
-});
-
-
-document.addEventListener("change",(e)=>{
-  if(e.target.className=="check"){
-    let span=e.target.nextSibling;
-   span.classList.add("completed")
-  }
-})
-
-function render(){
-   if(todos.length==0){
-    ul.innerHTML="There are no any tasks..."
-   }
-   else{
-        ul.innerHTML=""; 
-        let content="";
-        todos.forEach((item,index)=>{
-             content=`
-                <li>
-                    <input ${item.checked? 'class="completed"' :''}" id="item-${index}" type="checkbox" ${item.checked? "checked='true'" :''}">
-                    <label for='item-${index}'>${item.todo}</label>
-                    <button class="${index}">&times;</button>
-                </li>
-            `   
-            ul.innerHTML+=content;
-        })  
-   }
+class TodoItem{
+    constructor(text){
+        this.id=Date.now();
+        this.text=text;
+        this.checked=false;
+    }
 }
 
-ul.addEventListener("change",(e)=>{
-    let idCheck=e.target.getAttribute("id");
-    let label=ul.querySelector(`[for='${idCheck}']`)
-    
-    let value=label.textContent;
+class TodoApp{
+    todos=JSON.parse(localStorage.getItem('todos'))|| [];
 
-    todos.forEach((item)=>{
-        if(item.todo===value)
-        {
-            item.checked=!item.checked;
-        }
-    })
+    renderDOM(){
+        const container=document.querySelector("#app");
+        //h1
+        let h1=document.createElement("h1");
+        h1.classList.add("main-h1");
+        h1.textContent="ToDo List";
+        //form
+        let div=document.createElement("div");
+        div.classList.add("todo-form");
+        //input
+        let input=document.createElement("input");
+        input.type="text";
+        input.placeholder="Enter todo task";
+        input.classList.add("todo-input");
+        //button
+        let button=document.createElement("button");
+        button.classList.add("submit");
+        button.textContent="Add";
+        button.setAttribute("onclick","todoApp.addTodo()")
+        //ul
+        let ul=document.createElement("ul");
+        ul.classList.add("todo-list");
+        ul.innerHTML="<li>Buy bread</li>"
 
-})
 
+        div.appendChild(input);
+        div.appendChild(button);
 
-ul.addEventListener("click",(e)=>{
-    if(e.target.tagName=="BUTTON"){
-      let index=+e.target.classList.value;
-      todos=todos.filter((_,i)=>i!=index)
-     render();
-            
+        
+        container.classList.add("container");
+        container.appendChild(h1);
+        container.appendChild(div);
+        container.appendChild(ul);
+
+        this.renderTodos();
     }
+
+    renderTodos(){
+        const ul=document.querySelector(".todo-list");
+        if(this.todos.length===0){
+            ul.innerHTML="No any todos..."
+        }else{
+            ul.innerHTML="";
+            this.todos.forEach((elem)=>{
+                let li=document.createElement("li");
+
+                //inner content
+                let checkbox=document.createElement("input");
+                checkbox.type="checkbox";
+              
+                checkbox.id=elem.id;
+                let label=document.createElement("label");
+                label.textContent=elem.text;
+                if(elem.checked){
+                    checkbox.checked="true";
+                    label.classList.add("completed");
+                }else{
+                    label.classList.remove("completed");
+                }
+                label.setAttribute("for",elem.id);
+                let deleteButton=document.createElement("button");
+                deleteButton.classList.add(elem.id);
+                deleteButton.innerHTML="&times;";
+
+                li.appendChild(checkbox);
+                li.appendChild(label);
+                li.appendChild(deleteButton);
+                ul.appendChild(li);
+            })
+
+        }
+    }
+
+    showConsole(){
+        console.log("work")
+        return false;
+    }
+
+    addTodo(){
+        const todoInput=document.querySelector(".todo-input");
+        const value=todoInput.value;
+        todoInput.value="";
+        if(value.trim().length===0){
+            alert("Error! You entered the empty value.")
+            return;
+        }
+
+        let newItem=new TodoItem(value);
+        this.todos.push(newItem);
+        this.saveinLocalStorage();
+        this.renderTodos();
+    }
+
+    deleteTodoItem(button){
+        let i=+button.classList.value;
+        this.todos=this.todos.filter(elem=>elem.id!=i);
+        this.saveinLocalStorage();
+        this.renderTodos();
+    }   
+
+    changeStatus(checkbox){
+        let idCheck=+checkbox.getAttribute("id");
+        
+
+        this.todos=this.todos.map((item)=>{
+            if(item.id===idCheck)
+            {
+                return{
+                    ...item,
+                    checked:!item.checked,
+                }
+            }
+            return item;
+        })
+        this.saveinLocalStorage();
+        this.renderTodos();
+    }
+
+    saveinLocalStorage(){
+        localStorage.setItem("todos",JSON.stringify(this.todos));
+    }
+}
+    
+
+
+let todoApp=new TodoApp;
+
+document.addEventListener("DOMContentLoaded",()=>{
+    todoApp.renderDOM();
+
+    let ul=document.querySelector(".todo-list");
+    ul.addEventListener("click",(e)=>{
+       if(e.target.tagName=="BUTTON"){
+        todoApp.deleteTodoItem(e.target);
+       }
+    }) 
+    
+   
+    ul.addEventListener("change",(e)=>{
+       if(e.target.tagName=="INPUT"){
+        todoApp.changeStatus(e.target);
+       }
+    })  
 })

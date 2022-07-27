@@ -1,8 +1,37 @@
 class TodoItem{
-    constructor(text){
-        this.id=Date.now();
-        this.text=text;
-        this.checked=false;
+    
+   createTodo(text){
+        return {
+            id:Date.now(),
+            text:text,
+            checked:false,
+        }
+    }
+    createTodoLI(elem){
+        let li=document.createElement("li");
+
+        //inner content
+        let checkbox=document.createElement("input");
+        checkbox.type="checkbox";
+      
+        checkbox.dataset.id=elem.id;
+        let label=document.createElement("label");
+        label.textContent=elem.text;
+        if(elem.checked){
+            checkbox.checked="true";
+            label.classList.add("completed");
+        }else{
+            label.classList.remove("completed");
+        }
+        label.setAttribute("for",elem.id);
+        let deleteButton=document.createElement("button");
+        deleteButton.dataset.id=elem.id;
+        deleteButton.innerHTML="&times;";
+
+        li.appendChild(checkbox);
+        li.appendChild(label);
+        li.appendChild(deleteButton);
+        return li;
     }
 }
 
@@ -52,31 +81,9 @@ class TodoApp{
             ul.innerHTML="No any todos..."
         }else{
             ul.innerHTML="";
+            let todoItem=new TodoItem;
             this.todos.forEach((elem)=>{
-                let li=document.createElement("li");
-
-                //inner content
-                let checkbox=document.createElement("input");
-                checkbox.type="checkbox";
-              
-                checkbox.id=elem.id;
-                let label=document.createElement("label");
-                label.textContent=elem.text;
-                if(elem.checked){
-                    checkbox.checked="true";
-                    label.classList.add("completed");
-                }else{
-                    label.classList.remove("completed");
-                }
-                label.setAttribute("for",elem.id);
-                let deleteButton=document.createElement("button");
-                deleteButton.classList.add(elem.id);
-                deleteButton.innerHTML="&times;";
-
-                li.appendChild(checkbox);
-                li.appendChild(label);
-                li.appendChild(deleteButton);
-                ul.appendChild(li);
+                ul.appendChild(todoItem.createTodoLI(elem));
             })
 
         }
@@ -96,21 +103,23 @@ class TodoApp{
             return;
         }
 
-        let newItem=new TodoItem(value);
+        let todoItem=new TodoItem();
+        console.log(todoItem)
+        let newItem=todoItem.createTodo(value)
         this.todos.push(newItem);
         this.saveinLocalStorage();
         this.renderTodos();
     }
 
     deleteTodoItem(button){
-        let i=+button.classList.value;
+        let i=+button.getAttribute("data-id")
         this.todos=this.todos.filter(elem=>elem.id!=i);
         this.saveinLocalStorage();
         this.renderTodos();
     }   
 
     changeStatus(checkbox){
-        let idCheck=+checkbox.getAttribute("id");
+        let idCheck=+checkbox.getAttribute("data-id");
         
 
         this.todos=this.todos.map((item)=>{

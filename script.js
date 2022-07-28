@@ -39,6 +39,7 @@ class TodoApp{
     todos=JSON.parse(localStorage.getItem('todos'))|| [];
 
     renderDOM(){
+        localStorage.setItem("variant","All")
         const container=document.querySelector("#app");
         //h1
         let h1=document.createElement("h1");
@@ -47,6 +48,15 @@ class TodoApp{
         //form
         let div=document.createElement("div");
         div.classList.add("todo-form");
+
+        let activateButton=document.createElement("button");
+        activateButton.classList.add("activate");
+        if(localStorage.getItem("buttonStatus")==="active"){
+            activateButton.classList.add("active");
+        }
+        activateButton.innerHTML=`&#9745;`;
+        activateButton.setAttribute("onclick",`todoApp.changeAllCompleted()`)
+
         //input
         let input=document.createElement("input");
         input.type="text";
@@ -60,38 +70,71 @@ class TodoApp{
         //ul
         let ul=document.createElement("ul");
         ul.classList.add("todo-list");
-        ul.innerHTML="<li>Buy bread</li>"
 
-
+        div.appendChild(activateButton);
         div.appendChild(input);
         div.appendChild(button);
 
+        //Filtering 
+        let filterDiv=document.createElement("div");
+        filterDiv.classList.add("filter-area");
+        //Select
+        let select=document.createElement("select");
+        let options=["All","Active","Completed"];
+        options.forEach(elem=>{
+            let option=document.createElement("option")
+            option.text=elem;
+            select.add(option);
+
+        })
+        select.setAttribute("onChange","todoApp.filter(this)")
+        filterDiv.appendChild(select)
         
         container.classList.add("container");
         container.appendChild(h1);
         container.appendChild(div);
         container.appendChild(ul);
+        container.appendChild(filterDiv);
 
         this.renderTodos();
     }
 
-    renderTodos(){
+
+    renderTodos(ownArray=undefined){
+        let arr=[];
+        ownArray? arr=ownArray.slice(0): arr=this.todos.slice(0)
         const ul=document.querySelector(".todo-list");
-        if(this.todos.length===0){
+        if(arr.length===0){
             ul.innerHTML="No any todos..."
         }else{
             ul.innerHTML="";
             let todoItem=new TodoItem;
-            this.todos.forEach((elem)=>{
+            arr.forEach((elem)=>{
                 ul.appendChild(todoItem.createTodoLI(elem));
             })
-
         }
     }
 
-    showConsole(){
-        console.log("work")
-        return false;
+    changeAllCompleted(){
+        let activateButton=document.querySelector(".activate");
+        activateButton.classList.toggle("active");
+
+        this.todos=this.todos.map((elem)=>{
+            if(activateButton.classList.contains("active")){
+                return{
+                    ...elem,
+                    checked:true,
+                }
+            }else{
+                return{
+                    ...elem,
+                    checked:false,
+                } 
+            }
+        })
+        activateButton.classList.contains("active")?this.saveButtonStatusInLocalStorage("active"):this.saveButtonStatusInLocalStorage("non-active");
+        this.saveinLocalStorage();
+        this.filter()
     }
 
     addTodo(){
@@ -104,23 +147,22 @@ class TodoApp{
         }
 
         let todoItem=new TodoItem();
-        console.log(todoItem)
         let newItem=todoItem.createTodo(value)
         this.todos.push(newItem);
         this.saveinLocalStorage();
-        this.renderTodos();
+        this.filter();
     }
 
     deleteTodoItem(button){
         let i=+button.getAttribute("data-id")
         this.todos=this.todos.filter(elem=>elem.id!=i);
         this.saveinLocalStorage();
-        this.renderTodos();
+        this.filter();
     }   
 
     changeStatus(checkbox){
         let idCheck=+checkbox.getAttribute("data-id");
-        
+        let allCompleted=this.todos.length;
 
         this.todos=this.todos.map((item)=>{
             if(item.id===idCheck)
@@ -131,16 +173,77 @@ class TodoApp{
                 }
             }
             return item;
-        })
-        this.saveinLocalStorage();
-        this.renderTodos();
+        }) 
+
+        for(let i=0;i<this.todos.length;i++){
+            if(!this.todos[i].checked){
+                allCompleted--
+            }
+        }
+
+        this.saveinLocalStorage();  
+        this.filter()
+        let activateButton=document.querySelector(".activate");
+        if(allCompleted==this.todos.length){
+            activateButton.classList.add("active")
+            this.saveButtonStatusInLocalStorage("active");
+        }else{
+            activateButton.classList.remove("active");
+            this.saveButtonStatusInLocalStorage("");
+        }
+        
+    }
+
+    changeTodoText(e){
+        if(e.value){
+            let id=+e.parentElement.getAttribute("for");
+            this.todos=todoApp.todos.map((elem)=>{
+                if(elem.id==id){
+                    return{
+                        ...elem,
+                        text:e.value
+                    }
+                }
+                return elem;
+            })
+            this.saveinLocalStorage();
+            this.renderTodos()
+        }
+        return false;
+    }
+
+    filter(select){
+        let variant;
+        if(select){
+             variant=select.options[select.selectedIndex].text;
+             localStorage.setItem("variant",variant)
+        }else{
+           variant=localStorage.getItem("variant");
+        }
+       
+        let arr=[];
+        switch(variant){
+            case "Active":
+                arr=this.todos.filter(elem=>elem.checked!=true);
+                break;
+            case "Completed":
+                arr=this.todos.filter(elem=>elem.checked!=false);
+                break;
+            case "All":
+                arr=this.todos.slice(0);
+                break;
+        }
+        this.renderTodos(arr);
     }
 
     saveinLocalStorage(){
         localStorage.setItem("todos",JSON.stringify(this.todos));
+    } 
+    
+    saveButtonStatusInLocalStorage(status){
+        localStorage.setItem("buttonStatus",status);
     }
 }
-    
 
 
 let todoApp=new TodoApp;
@@ -149,6 +252,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     todoApp.renderDOM();
 
     let ul=document.querySelector(".todo-list");
+
     ul.addEventListener("click",(e)=>{
        if(e.target.tagName=="BUTTON"){
         todoApp.deleteTodoItem(e.target);
@@ -160,5 +264,23 @@ document.addEventListener("DOMContentLoaded",()=>{
        if(e.target.tagName=="INPUT"){
         todoApp.changeStatus(e.target);
        }
-    })  
+    }) 
+    
+    ul.addEventListener("dblclick",(e)=>{
+        let elem=e.target;
+
+        if(elem.tagName=="LABEL"){
+            let taskText=elem.textContent;
+            let input=document.createElement("input");
+            input.value=taskText;
+
+            elem.innerHTML="";
+            elem.appendChild(input);
+            input.focus();
+
+            input.addEventListener("blur",(e)=>{
+                todoApp.changeTodoText(e.target)
+            })
+        }   
+    })
 })

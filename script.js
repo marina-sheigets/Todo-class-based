@@ -214,6 +214,8 @@ class TodoApp{
 
     filter(select){
         let variant;
+        let activateButton=document.querySelector(".activate");
+        
         if(select){
              variant=select.options[select.selectedIndex].text;
              localStorage.setItem("variant",variant)
@@ -224,12 +226,15 @@ class TodoApp{
         let arr=[];
         switch(variant){
             case "Active":
+                activateButton.classList.remove("active")
                 arr=this.todos.filter(elem=>elem.checked!=true);
                 break;
             case "Completed":
+                activateButton.classList.add("active")
                 arr=this.todos.filter(elem=>elem.checked!=false);
                 break;
             case "All":
+                activateButton.classList.remove("active")
                 arr=this.todos.slice(0);
                 break;
         }
